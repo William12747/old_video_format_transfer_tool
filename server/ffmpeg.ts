@@ -1,12 +1,34 @@
 import ffmpeg from "fluent-ffmpeg";
 import path from "path";
 import fs from "fs";
+import { execSync } from "child_process";
 import { storage } from "./storage";
+
+// 檢查 FFmpeg 是否可用
+function checkFFmpegAvailable(): boolean {
+  try {
+    execSync("ffmpeg -version", { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function processVideo(jobId: number, inputPath: string, outputDir: string) {
   try {
     const job = await storage.getJob(jobId);
     if (!job) return;
+
+    // 檢查 FFmpeg 是否可用
+    if (!checkFFmpegAvailable()) {
+      await storage.updateJobStatus(
+        jobId, 
+        "failed", 
+        undefined, 
+        "FFmpeg 未安裝。請安裝 FFmpeg 後再試。詳見 SETUP.md"
+      );
+      return;
+    }
 
     await storage.updateJobStatus(jobId, "processing");
 
